@@ -2,14 +2,22 @@ const {response,request}= require('express');
 const Usuario= require('../models/usuario');
 const bcryptjs= require('bcryptjs');
 
-const usuariosGet= (req=request, res=response) => {
+const usuariosGet= async (req=request, res=response) => {
 
-    const {nombre,query,id}= req.query;
+    const {limite=5, desde=0}= req.query;
+    const query={estado:true};
+    // const usuarios= await Usuario.find(query).skip(Number(desde)).limit(Number(limite));
+    // const total= await Usuario.find(query).countDocuments();
+
+    const [total,usuarios]= await Promise.all([
+        Usuario.find(query).countDocuments(),
+        Usuario.find(query).skip(Number(desde)).limit(Number(limite))
+    ]);
 
     res.json({
-        msg: "get API - controller",
-        query,
-        id
+        msg: "Se retorna el listado de usuarios",
+        total,
+        usuarios
     })
 }
 
@@ -18,8 +26,6 @@ const usuariosPost= async (req, res) => {
     const {nombre,correo,password,rol}=req.body;
     const usuario= new Usuario({nombre,correo,password,rol});
     
-    // verificar si el correo existe
-
     // encriptar contraseña
     const salt= bcryptjs.genSaltSync();
     usuario.password= bcryptjs.hashSync(password,salt);
@@ -28,18 +34,27 @@ const usuariosPost= async (req, res) => {
     await usuario.save();
 
     res.json({
-        msg: "post API controller ",
+        msg: "El usuario se ha creado de forma exitosa.",
         usuario
     })
 }
 
-const usuariosPut= (req, res) => {
+const usuariosPut= async (req, res) => {
     
-    const id= req.params.id;
+    const {id}= req.params;
+    const {_id,password, google,correo,...resto}= req.body;
+
+    if(password){
+        // encriptar contraseña
+        const salt= bcryptjs.genSaltSync();
+        resto.password= bcryptjs.hashSync(password,salt);
+    }
+
+    usuario= await Usuario.findByIdAndUpdate(id,resto);
 
     res.json({
-        msg: "put API - controller",
-        id: id
+        msg: `El usuario ${usuario.nombre} se ha actualizado de manera exitosa.`,
+        usuario: usuario
     })
 }
 const usuariosPatch= (req, res) => {
@@ -48,9 +63,14 @@ const usuariosPatch= (req, res) => {
     })
 }
 
-const usuariosDelete= (req, res) => {
+const usuariosDelete= async (req, res) => {
+
+    const {id}= req.params;
+    const usuario= await Usuario.findByIdAndUpdate(id,{estado:false});
+
     res.json({
-        msg: "delete API - controller"
+        msg: "Usuario eliminado de manera exitosa",
+        usuario
     })
 }
 
