@@ -71,7 +71,60 @@ const actualizarImagen= async (req=request,res=response) =>{
 
 }
 
+const mostrarImagen= async (req,res=response) =>{
+
+    const {coleccion,id}= req.params;
+
+    let modelo;
+
+    switch (coleccion) {
+        case 'usuarios':
+            modelo= await Usuario.findById(id);
+
+            if(!modelo){
+                return res.status(400).json({
+                    msg: `No existe un usuario con el id ${id}`
+                });
+            }
+        break;
+
+        case 'productos':
+            modelo= await Producto.findById(id);
+
+            if(!modelo){
+                return res.status(400).json({
+                    msg: `No existe un producto con el id ${id}`
+                });
+            }
+        break;
+    
+        default:
+            return res.json({msg: 'El modelo enviado no se encuentra permitido'})
+    }
+
+    try {
+
+        if(modelo.img){
+
+            // borrar imagen del servidor
+            const pathTmagen= path.join(__dirname,'../uploads/',coleccion,modelo.img);
+            if(fs.existsSync(pathTmagen)){
+                return res.sendFile(pathTmagen);
+            }
+
+        }
+
+    } catch (msg) {
+        res.status(400).json({msg});
+    }
+
+    const pathTmagen= path.join(__dirname,'../assets/no-image.jpg');
+    res.sendFile(pathTmagen);
+
+}
+
 module.exports={
     cargarArchivos,
-    actualizarImagen
+    actualizarImagen,
+    mostrarImagen
 }
